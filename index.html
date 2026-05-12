@@ -469,6 +469,8 @@ tbody tr:last-child td { border-bottom:none; }
       <a onclick="navigate('estoque')" id="nav-estoque" data-page="estoque">
         <span class="ic">📦</span><span>Estoque</span>
       </a>
+      <div class="nav-section">Clientes</div>
+
       <div class="nav-section">Serviços</div>
       <a onclick="navigate('manutencao')" id="nav-manutencao" data-page="manutencao">
         <span class="ic">🔧</span><span>Manutenção</span>
@@ -3696,30 +3698,12 @@ function imprimirCupomTermico(id) {
   if (!o) return;
 
   const dataFormatada = new Date(o.data).toLocaleDateString('pt-BR');
-  const horaFormatada = new Date(o.data).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
   const pagLabels = { dinheiro:'Dinheiro', pix:'PIX', debito:'Cartão Débito', credito:'Cartão Crédito' };
-  const pagLabel = o.pagamentos && o.pagamentos.length > 1
-    ? o.pagamentos.map(p => (pagLabels[p.tipo]||p.tipo) + ' ' + fmt(p.valor)).join(' + ')
-    : (pagLabels[o.pagamento] || o.pagamento || '—');
-
-  // Checklist checkboxes
-  const chkItems = [
-    { key:'av-arranhado',     label:'Arranhado' },
-    { key:'av-trincado',      label:'Trincado' },
-    { key:'av-desligado',     label:'Desligado' },
-    { key:'av-naocarrega',    label:'Não carrega' },
-    { key:'av-biofaceid',     label:'Bio/Face ID off' },
-    { key:'av-semchip',       label:'Sem chip' },
-    { key:'av-tampaquebrada', label:'Tampa quebrada' },
-    { key:'av-molhado',       label:'Molhado' },
-  ];
-  const chkHTML = chkItems.map(c => {
-    const checked = o.checklist && o.checklist[c.key];
-    const box = checked
-      ? `<div style="width:9px;height:9px;border:1.2px solid #000;border-radius:1px;flex-shrink:0;background:#000;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:7px;font-weight:900;">✓</div>`
-      : `<div style="width:9px;height:9px;border:1.2px solid #000;border-radius:1px;flex-shrink:0;"></div>`;
-    return `<div style="display:flex;align-items:center;gap:3px;font-size:11px;">${box}${c.label}</div>`;
-  }).join('');
+  const valor = parseFloat(o.valor) || 0;
+  const cfg = db.config || {};
+  const nomeLoja  = cfg.nome     || 'ESC CELL';
+  const cnpjLoja  = cfg.cnpj     || '26.722.685/0001-73';
+  const endLoja   = cfg.endereco || 'Rua das Rosas, 39 — Guarituba, Piraquara – PR';
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -3729,94 +3713,100 @@ function imprimirCupomTermico(id) {
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    font-family:'Calibri','Calibri (Body)',sans-serif;
-    background:#fff;
-    color:#000;
-    font-size:12px;
-    display:flex;
-    justify-content:center;
-    padding:0;
+    font-family:'Courier New', Courier, monospace;
+    background:#fff; color:#000; font-size:11.5px;
+    display:flex; justify-content:center; padding:8px 0 16px;
   }
-  .cupom {
-    width:280px;
-    padding:10px 12px 16px;
-  }
+  .cupom { width:280px; padding:8px 10px 14px; }
   @media print {
     body { padding:0; }
-    .cupom { width:72mm; padding:4px 6px 12px; }
+    .cupom { width:72mm; padding:4px 4px 12px; }
     @page { size:72mm auto; margin:0; }
   }
+  .center { text-align:center; }
+  hr.solid  { border:none; border-top:1px solid #000; margin:5px 0; }
+  hr.dashed { border:none; border-top:1px dashed #888; margin:5px 0; }
+  table.svcs { width:100%; border-collapse:collapse; font-size:10px; margin:3px 0; }
+  table.svcs thead tr { border-bottom:1px solid #000; }
+  table.svcs th { font-weight:900; padding:1px 2px; text-align:left; }
+  table.svcs th:not(:first-child) { text-align:right; }
+  table.svcs td { padding:2px 2px; vertical-align:top; }
+  table.svcs td:not(:first-child) { text-align:right; white-space:nowrap; }
+  .tot-row { display:flex; justify-content:space-between; font-size:11px; margin:1px 0; }
+  .tot-row.grand { font-size:12px; font-weight:900; border-top:1px solid #000; padding-top:3px; margin-top:3px; }
 </style>
 </head>
 <body>
 <div class="cupom">
 
-
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
-    <div>
-      <div style="font-size:10px;font-weight:700;">ORDEM DE SERVIÇO</div>
-      <div style="font-size:17px;font-weight:900;">#${String(o.id).padStart(4,'0')}</div>
-    </div>
-    <div style="text-align:right;font-size:11px;">
-      <div>${dataFormatada}</div>
-      <div>${horaFormatada}</div>
-    </div>
+  <div class="center" style="margin-bottom:6px;">
+    <div style="font-size:14px;font-weight:900;letter-spacing:1px;">${nomeLoja.toUpperCase()}</div>
+    <div style="font-size:10px;">CNPJ ${cnpjLoja}</div>
+    <div style="font-size:10px;">${endLoja}</div>
   </div>
 
-  <div style="border-top:1px dashed #888;margin:4px 0;"></div>
+  <hr class="solid">
 
-  <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Cliente</div>
-  <div style="display:flex;justify-content:space-between;margin:1px 0;font-size:11.5px;"><span style="color:#555;">Nome:</span><span style="font-weight:700;">${(o.cliente||'—').toUpperCase()}</span></div>
-  <div style="display:flex;justify-content:space-between;margin:1px 0;font-size:11.5px;"><span style="color:#555;">Tel:</span><span style="font-weight:700;">${o.telefone||'—'}</span></div>
+  <div style="font-size:11px;margin:3px 0;"><strong>Cliente:</strong> ${(o.cliente||'—').toUpperCase()}</div>
 
-  <div style="border-top:1px dashed #888;margin:4px 0;"></div>
+  <hr class="dashed">
 
-  <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Aparelho</div>
-  <div style="display:flex;justify-content:space-between;margin:1px 0;font-size:11.5px;"><span style="color:#555;">Marca/Modelo:</span><span style="font-weight:700;">${((o.marca||'')+' '+(o.modelo||'')).trim().toUpperCase()}</span></div>
-  <div style="display:flex;justify-content:space-between;margin:1px 0;font-size:11.5px;"><span style="color:#555;">IMEI:</span><span style="font-weight:700;">${o.imei||'—'}</span></div>
-  ${o.cor ? `<div style="display:flex;justify-content:space-between;margin:1px 0;font-size:11.5px;"><span style="color:#555;">Cor:</span><span style="font-weight:700;">${o.cor}</span></div>` : ''}
-
-  <div style="border-top:1px dashed #888;margin:4px 0;"></div>
-
-  <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Problema Relatado</div>
-  <div style="border:1px solid #000;border-radius:2px;padding:3px 5px;font-weight:700;font-size:11.5px;">${(o.defeito||'Não informado').toUpperCase()}</div>
-
-  <div style="border-top:1px dashed #888;margin:4px 0;"></div>
-
-  <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Senha / Padrão de Desbloqueio</div>
-  <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:3px;">
-    <div style="border:1px solid #000;border-radius:2px;padding:2px 4px;font-size:10px;">☐ PIN</div>
-    <div style="border:1px solid #000;border-radius:2px;padding:2px 4px;font-size:10px;">☐ Senha</div>
-    <div style="border:1px solid #000;border-radius:2px;padding:2px 4px;font-size:10px;">☐ Padrão</div>
-    <div style="border:1px solid #000;border-radius:2px;padding:2px 4px;font-size:10px;">☐ Sem senha</div>
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:#555;">
+    <span>Ordem de serviço</span><span>Data</span><span>Data prevista</span>
   </div>
-  <div style="font-size:10px;color:#555;margin-bottom:3px;">Padrão: marque a sequência</div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #000;border-radius:3px;overflow:hidden;width:80px;margin:0 auto 3px;">
-    ${[1,2,3,4,5,6,7,8,9].map((n,i) => {
-      const borderRight = (i%3 < 2) ? 'border-right:1px solid #bbb;' : '';
-      const borderBottom = (i < 6) ? 'border-bottom:1px solid #bbb;' : '';
-      return `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;${borderRight}${borderBottom}position:relative;">
-        <span style="position:absolute;top:1px;left:2px;font-size:7px;color:#aaa;">${n}</span>
-        <div style="width:8px;height:8px;border-radius:50%;border:1.5px solid #000;background:#fff;"></div>
-      </div>`;
-    }).join('')}
+  <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-bottom:2px;">
+    <span>${String(o.id).padStart(4,'0')}</span>
+    <span>${dataFormatada}</span>
+    <span>—</span>
   </div>
-  <div style="font-size:11px;margin-top:3px;">PIN/Senha: <span style="display:inline-block;border-bottom:1px solid #000;width:140px;">&nbsp;</span></div>
 
-  <div style="border-top:1px dashed #888;margin:4px 0;"></div>
+  <hr class="dashed">
 
-  <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Serviços / Peças</div>
-  <div style="border:1px solid #000;border-radius:2px;padding:3px 5px;font-weight:700;font-size:11.5px;min-height:22px;">${(o.servico||'').toUpperCase()}</div>
+  <div style="font-size:10.5px;font-weight:700;margin-bottom:1px;">Equipamento</div>
+  <div style="font-size:10.5px;">SMARTPHONE ${((o.marca||'')+' '+(o.modelo||'')).trim().toUpperCase()}</div>
+  ${o.cor ? `<div style="font-size:10.5px;">COR: ${o.cor.toUpperCase()}</div>` : ''}
 
-  <div style="border-top:1px dashed #888;margin:4px 0;"></div>
+  <hr class="dashed">
 
+  <div style="font-size:10.5px;font-weight:700;margin-bottom:1px;">Problema</div>
+  <div style="font-size:11px;font-weight:900;">${(o.defeito||'NÃO INFORMADO').toUpperCase()}</div>
 
-  <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Pagamento</div>
-  <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:2px;"><span style="color:#555;">Forma:</span><span style="font-weight:700;">${pagLabel}</span></div>
-  <div style="border:2px solid #000;border-radius:3px;padding:4px;text-align:center;font-size:15px;font-weight:900;letter-spacing:1px;">TOTAL: ${fmt(o.valor||0)}</div>
+  <hr class="dashed">
 
+  <table class="svcs">
+    <thead>
+      <tr>
+        <th>Serviços</th>
+        <th>Qtd</th>
+        <th>Preço UN</th>
+        <th>Desconto</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="5" style="font-size:9.5px;padding-top:2px;">Item: ${(o.servico||'SERVIÇO').toUpperCase()}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>1</td>
+        <td>${valor.toFixed(2)}</td>
+        <td>0.00</td>
+        <td>${valor.toFixed(2)}</td>
+      </tr>
+    </tbody>
+  </table>
 
+  <hr class="dashed">
 
+  <div style="font-size:10px;font-weight:700;margin-bottom:1px;">Observações do recebimento</div>
+  <div style="font-size:10.5px;min-height:14px;">${(o.observacoes||'').toUpperCase()}</div>
+
+  <hr class="solid">
+
+  <div class="tot-row"><span>Total serviços</span><span>${valor.toFixed(2)}</span></div>
+  <div class="tot-row"><span>Total peças</span><span>0,00</span></div>
+  <div class="tot-row grand"><span>Total ordem de serviço</span><span>${valor.toFixed(2)}</span></div>
 
 </div>
 <script>window.onload=()=>window.print();<\/script>
