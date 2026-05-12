@@ -469,6 +469,8 @@ tbody tr:last-child td { border-bottom:none; }
       <a onclick="navigate('estoque')" id="nav-estoque" data-page="estoque">
         <span class="ic">📦</span><span>Estoque</span>
       </a>
+      <div class="nav-section">Clientes</div>
+
       <div class="nav-section">Serviços</div>
       <a onclick="navigate('manutencao')" id="nav-manutencao" data-page="manutencao">
         <span class="ic">🔧</span><span>Manutenção</span>
@@ -2522,16 +2524,6 @@ function imprimirCupomVenda(id) {
 </head>
 <body>
 
-  <!-- CABEÇALHO -->
-  <div class="center">
-    <div class="store-name">ESC CELL</div>
-    <div class="store-sub">Assistência Técnica em Celulares</div>
-    <div class="store-sub">Rua das Rosas, 39 — Guarituba, Piraquara/PR</div>
-    <div class="store-sub">(41) 99197-2206</div>
-    <div class="store-sub">CNPJ: 64.468.595/0001-97</div>
-  </div>
-
-  <hr class="separator-solid">
 
   <!-- ORDEM DE SERVIÇO -->
   <div class="os-header">
@@ -2597,26 +2589,6 @@ function imprimirCupomVenda(id) {
 
   <hr class="separator-dashed">
 
-  <!-- AVARIAS -->
-  <div class="section-title">Condições na Entrada</div>
-  <div class="chk-grid">
-    ${[
-      ['av-arranhado','Arranhado'],
-      ['av-trincado','Trincado'],
-      ['av-desligado','Desligado'],
-      ['av-naocarrega','Não carrega'],
-      ['av-biofaceid','Bio/Face ID off'],
-      ['av-semchip','Sem chip'],
-      ['av-tampaquebrada','Tampa quebrada'],
-      ['av-molhado','Molhado']
-    ].map(([k,l]) => {
-      const m = o.checklist && o.checklist[k];
-      return `<div class="chk-item"><div class="chk-box ${m?'marcado':''}">${m?'✓':''}</div>${l}</div>`;
-    }).join('')}
-  </div>
-  ${o.avarias ? `<div style="font-size:9px;margin-top:2px"><b>Outros:</b> ${o.avarias}</div>` : ''}
-
-  <hr class="separator-dashed">
 
   <!-- OBS DE RECEBIMENTO -->
   ${o.obs ? `<div class="section-title">Observações</div><div class="field-box">${o.obs}</div><hr class="separator-dashed">` : ''}
@@ -2626,17 +2598,8 @@ function imprimirCupomVenda(id) {
   <div class="row"><span class="lbl">Forma:</span><span class="val">${(o.pagamentos&&o.pagamentos.length>1?o.pagamentos.map(p=>(pagLabels[p.tipo]||p.tipo)).join(' + '):(pagLabels[o.pagamento]||o.pagamento||'—'))}</span></div>
   <div class="valor-total">TOTAL: ${fmt(o.valor||0)}</div>
 
-  <!-- ASSINATURA -->
-  <div class="ass-line"></div>
-  <div class="ass-label">Assinatura do Cliente</div>
 
-  <hr class="separator-dashed">
 
-  <!-- RODAPÉ -->
-  <div class="footer-txt">
-    Não nos responsabilizamos por aparelhos<br>
-    sem nota fiscal em operação policial.
-  </div>
 
 </div>
 <script>window.onload=()=>window.print();<\/script>
