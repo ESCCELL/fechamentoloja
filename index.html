@@ -3693,127 +3693,144 @@ function imprimirOS(id) {
 
 
 // ===== CUPOM TÉRMICO OS =====
-function imprimirCupomTermico(id) {
-  const o = db.ordens.find(x => x.id === id);
-  if (!o) return;
+function imprimirCupomVenda(id) {
+  const v = db.vendas.find(x => x.id === id);
+  if (!v) return;
 
-  const dataFormatada = new Date(o.data).toLocaleDateString('pt-BR');
-  const pagLabels = { dinheiro:'Dinheiro', pix:'PIX', debito:'Cartão Débito', credito:'Cartão Crédito' };
-  const valor = parseFloat(o.valor) || 0;
-  const cfg = db.config || {};
-  const nomeLoja  = cfg.nome     || 'ESC CELL';
-  const cnpjLoja  = cfg.cnpj     || '26.722.685/0001-73';
-  const endLoja   = cfg.endereco || 'Rua das Rosas, 39 — Guarituba, Piraquara – PR';
+  const nomeLoja  = (db.config && db.config.nome)     || 'ESC CELL';
+  const cnpjLoja  = (db.config && db.config.cnpj)     || '26.722.685/0001-73';
+  const endLoja   = (db.config && db.config.endereco) || 'Rua das Rosas, 39 — Guarituba, Piraquara – PR';
+
+  const dataStr = new Date(v.data).toLocaleString('pt-BR');
+  const labels  = { dinheiro:'Dinheiro', pix:'PIX', debito:'Cartão Débito', credito:'Cartão Crédito' };
+
+  const itensHtml = (v.items || []).map(i =>
+    `<tr>
+      <td>${i.nome}</td>
+      <td style="text-align:center">${i.qty}</td>
+      <td style="text-align:right">R$ ${Number(i.preco).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td style="text-align:right">R$ ${Number(i.preco * i.qty).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+    </tr>`
+  ).join('');
+
+  const descRow = v.disc > 0
+    ? `<div class="tot-row"><span>Desconto</span><span style="color:#e74c3c">- R$ ${Number(v.disc).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>`
+    : '';
+
+  const parteDinheiro  = (v.pagamentos||[]).filter(i => i.tipo==='dinheiro').reduce((s,i) => s+i.valor, 0);
+  const parteOutros    = (v.pagamentos||[]).filter(i => i.tipo!=='dinheiro').reduce((s,i) => s+i.valor, 0);
+  const recebidoReal   = v.recebidoDinheiro > 0 ? v.recebidoDinheiro : (parteDinheiro + (v.troco||0));
+  const recebidoRow    = (v.troco > 0 && parteDinheiro > 0)
+    ? `<div class="tot-row"><span>Recebido (Dinheiro)</span><span>R$ ${Number(recebidoReal).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>`
+    : '';
+  const trocoRow = v.troco > 0
+    ? `<div class="tot-row" style="font-size:16px;font-weight:700"><span>TROCO</span><span>R$ ${Number(v.troco).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>`
+    : '';
+
+  // Badge de pagamento: misto ou simples
+  let pagamentoStr;
+  if (v.pagamentos && v.pagamentos.length > 1) {
+    pagamentoStr = v.pagamentos.map(p =>
+      `${labels[p.tipo]||p.tipo}: R$ ${Number(p.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}${p.tipo==='credito'&&p.parcelas>1?' ('+p.parcelas+'x)':''}`
+    ).join(' + ');
+  } else {
+    const par = v.parcelas > 1 ? ` (${v.parcelas}x)` : '';
+    pagamentoStr = (labels[v.pagamento] || v.pagamento || 'Dinheiro') + par;
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Cupom OS #${o.id}</title>
+<title>Cupom #${v.id}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    font-family:'Calibri', 'Calibri (Body)', sans-serif;
-    background:#fff; color:#000; font-size:11.5px;
-    display:flex; justify-content:center; padding:8px 0 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #000;
+    background: #fff;
+    width: 80mm;
+    margin: 0 auto;
+    padding: 4mm 3mm 8mm;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  .cupom { width:280px; padding:8px 10px 14px; }
+  .center { text-align: center; }
+  .bold   { font-weight: bold; }
+  hr.solid  { border: none; border-top: 1px solid #000; margin: 5px 0; }
+  hr.dashed { border: none; border-top: 1px dashed #888; margin: 5px 0; }
+  .store-name { font-size: 16px; font-weight: 900; letter-spacing: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead th { text-align: left; border-bottom: 1px solid #000; padding: 2px 1px; font-weight: bold; }
+  thead th:not(:first-child) { text-align: right; }
+  tbody td { padding: 2px 1px; vertical-align: top; }
+  tbody td:not(:first-child) { text-align: right; white-space: nowrap; }
+  .tot-row { display: flex; justify-content: space-between; font-size: 12px; margin: 2px 0; }
+  .tot-row.grand { font-size: 14px; font-weight: 900; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }
+  .footer { font-size: 10px; color: #555; text-align: center; margin-top: 8px; line-height: 1.5; }
   @media print {
-    body { padding:0; }
-    .cupom { width:72mm; padding:4px 4px 12px; }
-    @page { size:72mm auto; margin:0; }
+    html, body { width: 80mm; margin: 0; padding: 0; }
+    @page { size: 80mm auto; margin: 0; }
   }
-  .center { text-align:center; }
-  hr.solid  { border:none; border-top:1px solid #000; margin:5px 0; }
-  hr.dashed { border:none; border-top:1px dashed #888; margin:5px 0; }
-  table.svcs { width:100%; border-collapse:collapse; font-size:10px; margin:3px 0; }
-  table.svcs thead tr { border-bottom:1px solid #000; }
-  table.svcs th { font-weight:900; padding:1px 2px; text-align:left; }
-  table.svcs th:not(:first-child) { text-align:right; }
-  table.svcs td { padding:2px 2px; vertical-align:top; }
-  table.svcs td:not(:first-child) { text-align:right; white-space:nowrap; }
-  .tot-row { display:flex; justify-content:space-between; font-size:11px; margin:1px 0; }
-  .tot-row.grand { font-size:12px; font-weight:900; border-top:1px solid #000; padding-top:3px; margin-top:3px; }
 </style>
 </head>
 <body>
-<div class="cupom">
 
-  <div class="center" style="margin-bottom:6px;">
-    <div style="font-size:14px;font-weight:900;letter-spacing:1px;">${nomeLoja.toUpperCase()}</div>
-    <div style="font-size:10px;">CNPJ ${cnpjLoja}</div>
-    <div style="font-size:10px;">${endLoja}</div>
+  <div class="center" style="margin-bottom:6px">
+    <div class="store-name">${nomeLoja.toUpperCase()}</div>
+    <div style="font-size:10px">CNPJ ${cnpjLoja}</div>
+    <div style="font-size:10px">${endLoja}</div>
   </div>
 
   <hr class="solid">
+  <div class="center bold" style="font-size:11px;margin:3px 0">CUPOM DE VENDA</div>
+  <hr class="solid">
 
-  <div style="font-size:11px;margin:3px 0;"><strong>Cliente:</strong> ${(o.cliente||'—').toUpperCase()}</div>
-
-  <hr class="dashed">
-
-  <div style="display:flex;justify-content:space-between;font-size:10px;color:#555;">
-    <span>Ordem de serviço</span><span>Data</span><span>Data prevista</span>
-  </div>
-  <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-bottom:2px;">
-    <span>${String(o.id).padStart(4,'0')}</span>
-    <span>${dataFormatada}</span>
-    <span>—</span>
+  <div style="font-size:11px;margin:3px 0">
+    <span class="bold">#${v.id}</span> &nbsp;|&nbsp; ${dataStr}
   </div>
 
   <hr class="dashed">
 
-  <div style="font-size:10.5px;font-weight:700;margin-bottom:1px;">Equipamento</div>
-  <div style="font-size:10.5px;">SMARTPHONE ${((o.marca||'')+' '+(o.modelo||'')).trim().toUpperCase()}</div>
-  ${o.cor ? `<div style="font-size:10.5px;">COR: ${o.cor.toUpperCase()}</div>` : ''}
-
-  <hr class="dashed">
-
-  <div style="font-size:10.5px;font-weight:700;margin-bottom:1px;">Problema</div>
-  <div style="font-size:11px;font-weight:900;">${(o.defeito||'NÃO INFORMADO').toUpperCase()}</div>
-
-  <hr class="dashed">
-
-  <table class="svcs">
+  <table>
     <thead>
       <tr>
-        <th>Serviços</th>
+        <th>Produto</th>
         <th>Qtd</th>
-        <th>Preço UN</th>
-        <th>Desconto</th>
+        <th>Unit.</th>
         <th>Total</th>
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td colspan="5" style="font-size:9.5px;padding-top:2px;">Item: ${(o.servico||'SERVIÇO').toUpperCase()}</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>1</td>
-        <td>${valor.toFixed(2)}</td>
-        <td>0.00</td>
-        <td>${valor.toFixed(2)}</td>
-      </tr>
+      ${itensHtml}
     </tbody>
   </table>
 
   <hr class="dashed">
 
-  <div style="font-size:10px;font-weight:700;margin-bottom:1px;">Observações do recebimento</div>
-  <div style="font-size:10.5px;min-height:14px;">${(o.observacoes||'').toUpperCase()}</div>
+  <div class="tot-row"><span>Subtotal</span><span>R$ ${Number(v.sub||v.total).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>
+  ${descRow}
+  <div class="tot-row grand"><span>TOTAL</span><span>R$ ${Number(v.total).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>
+
+  <hr class="dashed">
+
+  <div class="tot-row"><span>Pagamento</span><span style="text-align:right;max-width:55mm">${pagamentoStr}</span></div>
+  ${recebidoRow}
+  ${trocoRow}
 
   <hr class="solid">
 
-  <div class="tot-row"><span>Total serviços</span><span>${valor.toFixed(2)}</span></div>
-  <div class="tot-row"><span>Total peças</span><span>0,00</span></div>
-  <div class="tot-row grand"><span>Total ordem de serviço</span><span>${valor.toFixed(2)}</span></div>
+  <div class="footer">
+    Obrigado pela preferência!<br>
+    ${nomeLoja} — Volte sempre 😊
+  </div>
 
-</div>
-<script>window.onload=()=>window.print();<\/script>
 </body>
+<script>window.onload = () => window.print();<\/script>
 </html>`;
 
-  const win = window.open('', '_blank', 'width=340,height=800');
+  const win = window.open('', '_blank', 'width=400,height=700');
   if (!win) { toast('Permita pop-ups para imprimir', 'error'); return; }
   win.document.write(html);
   win.document.close();
